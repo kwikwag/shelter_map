@@ -30,13 +30,9 @@ This downloads the latest shelter datasets into `data/` and generates KMZ archiv
 
 ## Contribute
 
-Please feel free to contribute.
+Bug reports, new city implementations, and documentation improvements are welcome. Please read [`CONTRIBUTING.md`](CONTRIBUTING.md) for guidelines on environment setup, coding standards, and submitting pull requests.
 
 Especially welcome is support for more municipalities. To add a new city, create a new module under `shelter_map/by_city/`, update `all_cities` in `__init__.py`, and implement the two required functions. Each implementation should return `Map` with populated `Icon` and `Place` instances.
-
-## Contributing
-
-Bug reports, new city implementations, and documentation improvements are welcome. Please read [`CONTRIBUTING.md`](CONTRIBUTING.md) for guidelines on environment setup, coding standards, and submitting pull requests.
 
 ## License
 
