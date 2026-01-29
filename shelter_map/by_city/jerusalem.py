@@ -1,9 +1,12 @@
+import logging
 import urllib.parse
 from pathlib import Path
 
 import requests
 
 from ..common import Icon, Map, Place, dump, get_fair_user_agent, get_update_date, image_url_to_dataurl, load
+
+logger = logging.getLogger(__name__)
 
 NAME = "Jerusalem"
 JSON_NAME = "jerusalem_shelters.json"
@@ -12,12 +15,16 @@ BASE_URL = "https://www.jerusalem.muni.il/umbraco/api/map/GetMapById"
 
 def generate_map(data_dir: Path, icons_as_dataurls: bool = True):
     json_path = data_dir / JSON_NAME
+    logger.debug("Reading: %s", json_path)
+
     data = load(json_path)
     update_date = get_update_date(json_path)
+    logger.debug("Loaded. Update date: %s", update_date)
 
     icons = []
     places = []
     seen = set()
+    n = 0
 
     for group in data:
         url = urllib.parse.urljoin(BASE_URL, group["Icon"])
@@ -43,6 +50,7 @@ def generate_map(data_dir: Path, icons_as_dataurls: bool = True):
             #   "Name": "חניון בית אביחי",
             #   "ListName": null
             # }
+            n += 1
             lon = item["Longitude"]
             lat = item["Latitude"].rstrip(",")
             if not lon or not lat:
@@ -64,18 +72,30 @@ def generate_map(data_dir: Path, icons_as_dataurls: bool = True):
 
             places.append(Place(name=name, desc=desc, icon=icon, lon=float(lon), lat=float(lat)))
 
+    logger.debug("Number of entries: %s, unique places: %s, icons: %s", n, len(places), len(icons))
+
     return Map(icons=icons, places=places)
 
 
 def download_data(data_dir: Path):
     user_agent = get_fair_user_agent()
+    headers = {
+        "content-type": "application/json; charset=UTF-8",
+        "user-agent": user_agent,
+    }
+    data = '{"Culture":"he-IL","Id":5502}'
+    logger.debug(
+        "Downloading: %s",
+        dict(
+            url=BASE_URL,
+            data=data,
+            headers=headers,
+        ),
+    )
     response = requests.post(
         url=BASE_URL,
-        data='{"Culture":"he-IL","Id":5502}',
-        headers={
-            "content-type": "application/json; charset=UTF-8",
-            "user-agent": user_agent,
-        },
+        data=data,
+        headers=headers,
     )
     response.raise_for_status()
 

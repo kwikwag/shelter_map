@@ -1,8 +1,11 @@
+import logging
 from pathlib import Path
 
 import requests
 
 from ..common import Icon, Map, Place, dump, get_update_date, load
+
+logger = logging.getLogger(__name__)
 
 NAME = "Tel Aviv"
 
@@ -25,6 +28,7 @@ def get_tel_aviv_json(layer: str, limit: int):
         "spatialRel": "esriSpatialRelIntersects",
     }
 
+    logger.debug("Downloading data: %s", dict(url=url, params=params))
     response = requests.get(url, params=params)
     response.raise_for_status()
     return response.content
@@ -35,6 +39,8 @@ def get_tel_aviv_meta_json(layer: str):
     params = {
         "f": "pjson",
     }
+
+    logger.debug("Downloading metadata: %s", dict(url=url, params=params))
     response = requests.get(url, params=params)
     response.raise_for_status()
     return response.content
@@ -93,11 +99,14 @@ def get_icon_map(meta_data: dict):
 def generate_map(data_dir: Path):
     data_path = data_dir / SHELTERS_JSON
     meta_data_path = data_dir / SHELTERS_META_JSON
+    logger.debug("Loading: data=%s, meta_data=%s", data_path, meta_data_path)
 
     data = load(data_path)
     meta_data = load(meta_data_path)
 
-    get_update_date(data_path)
+    update_date = get_update_date(data_path)
+    logger.debug("Loaded. Update date: %s", update_date)
+
     aliases = data["fieldAliases"]
 
     icon_map = get_icon_map(meta_data=meta_data)
@@ -117,7 +126,10 @@ def generate_map(data_dir: Path):
         lat = float(attrs["lat"])
         places.append(Place(name=name, desc=desc, icon=icon_index, lon=lon, lat=lat))
 
-    return Map(icons=list(icon_map.values()), places=places)
+    icons = list(icon_map.values())
+
+    logger.debug("Number of places: %s, icons: %s", len(places), len(icons))
+    return Map(icons=icons, places=places)
 
 
 def download_data(data_dir: Path, layer: str = "592", limit: int = 5_000):
