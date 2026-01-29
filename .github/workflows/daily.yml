@@ -34,7 +34,7 @@ jobs:
           pip install -e .
 
       - name: Download latest shelter data
-        run: python -m shelter_map.download --out-dir data
+        run: python -m shelter_map.download --out-dir data --verbose
 
       - name: Run converter
         id: convert
