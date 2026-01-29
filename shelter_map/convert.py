@@ -230,9 +230,9 @@ def main():
 
     for city in all_cities:
         logger.debug("Exporting map for: %s", city.NAME)
-        city_map = city.generate_map(data_dir)
-        module_name = city.__name__.rsplit(".", 1)[-1]
         try:
+            city_map = city.generate_map(data_dir)
+            module_name = city.__name__.rsplit(".", 1)[-1]
             digest = export(
                 map_=city_map,
                 name=f"{city.NAME} Shelters",
