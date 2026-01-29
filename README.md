@@ -3,7 +3,7 @@
 To add a map of shelters in currrently supported cities (Tel Aviv and Jerusalem), go to this link in your mobile device:
 
 | https://goo.gl/maps/P2tPvyksfy7gCD3aA |
-| -- |
+| :--: |
 | ![Shelter map](images/qrcode.svg) |
 
 
