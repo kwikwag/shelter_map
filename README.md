@@ -4,7 +4,7 @@ To add a map of shelters in currrently supported cities (Tel Aviv and Jerusalem)
 
 | https://goo.gl/maps/P2tPvyksfy7gCD3aA |
 | :--: |
-| ![Shelter map](images/qrcode.svg) |
+| <img alt="Shelter map link QR code" src="images/qrcode.png" width="240" /> |
 
 
 This repository includes the tools used to create the above map.
