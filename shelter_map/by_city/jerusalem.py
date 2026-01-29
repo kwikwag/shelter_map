@@ -24,12 +24,17 @@ def generate_map(data_dir: Path, icons_as_dataurls: bool = True):
     icons = []
     places = []
     seen = set()
+    dataurl_cache = {}
     n = 0
 
     for group in data:
         url = urllib.parse.urljoin(BASE_URL, group["Icon"])
         if icons_as_dataurls:
-            url = image_url_to_dataurl(url)
+            dataurl = dataurl_cache.get(url)
+            if dataurl is None:
+                dataurl = image_url_to_dataurl(url)
+                dataurl_cache[url] = dataurl
+            url = dataurl
         icon = Icon(label=group["Name"], url=url)
         icons.append(icon)
 

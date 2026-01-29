@@ -5,12 +5,16 @@ import csv
 import hashlib
 import io
 import json
+import logging
 import zipfile
 from pathlib import Path
 from xml.dom.minidom import Document
 
 from .by_city import all_cities
 from .common import Map, dump
+
+
+logger = logging.getLogger(__name__)
 
 
 def to_csv(map_: Map):
@@ -151,6 +155,7 @@ def dump_kmz(contents, path, attachments):
 
 def export(map_: Map, name: str, out_dir: Path, base_name: str, format: str, max_per_file: int = 2_000):
     num_files = (len(map_.places) - 1) // max_per_file + 1
+    logger.debug("Exporting %s map into %s files.", name, num_files)
     for file_idx in range(num_files):
         suffix = "" if num_files == 1 else f".{file_idx + 1}"
         name_of_part = name if num_files == 1 else f"{name} ({file_idx + 1})"
@@ -203,7 +208,17 @@ def main():
     parser = argparse.ArgumentParser(description="Dump Google Maps formats")
     parser.add_argument("--data-dir", help="Path to data dir", default="data")
     parser.add_argument("--format", help="Output format", choices=["csv", "kml", "kmz"], default="kml")
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Enable verbose logging",
+    )
     args = parser.parse_args()
+
+    logging.basicConfig(
+        level=logging.DEBUG if args.verbose else logging.INFO,
+        format="%(levelname)s:%(name)s:%(message)s",
+    )
 
     format = args.format
     if format not in {"kml", "kmz", "csv"}:
@@ -214,16 +229,20 @@ def main():
     combined_hash = hashlib.sha256()
 
     for city in all_cities:
+        logger.debug("Exporting map for: %s", city.NAME)
         city_map = city.generate_map(data_dir)
         module_name = city.__name__.rsplit(".", 1)[-1]
-        digest = export(
-            map_=city_map,
-            name=f"{city.NAME} Shelters",
-            out_dir=data_dir,
-            base_name=f"{module_name}_shelters",
-            format=format,
-        )
-        combined_hash.update(digest)
+        try:
+            digest = export(
+                map_=city_map,
+                name=f"{city.NAME} Shelters",
+                out_dir=data_dir,
+                base_name=f"{module_name}_shelters",
+                format=format,
+            )
+            combined_hash.update(digest)
+        except Exception:
+            logger.exception("Failed to export map for: %s", city.NAME)
 
     print("Combined hash:", combined_hash.hexdigest())
 
