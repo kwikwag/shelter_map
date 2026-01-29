@@ -1,6 +1,17 @@
-# shelter-map
+# Urban shelters in Israel
 
-Tools for downloading public shelter locations from Israeli municipalities and exporting them into Google Maps–friendly formats (CSV, KML, KMZ).
+To add a map of shelters in currrently supported cities (Tel Aviv and Jerusalem), go to this link in your mobile device:
+
+| https://goo.gl/maps/P2tPvyksfy7gCD3aA |
+| -- |
+| ![Shelter map](images/qrcode.svg) |
+
+
+This repository includes the tools used to create the above map.
+These are reponsible for downloading public shelter locations from Israeli municipalities and exporting them into Google Maps–friendly formats (CSV, KML, KMZ).
+
+The outputs of this map are available through the [GitHub action workflow runs](https://github.com/kwikwag/shelter_map/actions/workflows/daily.yml) and are uploaded (manually) to a public Google MyMaps available here: 
+
 
 ## Quick start
 
