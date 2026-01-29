@@ -1,0 +1,54 @@
+name: Daily job to export KMZ files
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install project
+        run: pip install -e .
+
+      - name: Download latest shelter data
+        run: python -m shelter_map.download --out-dir data
+
+      - name: Run converter
+        id: convert
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m shelter_map.convert --data-dir data --format kmz | \
+            awk '/^Combined hash:/ {print "digest=" $3}' | \
+            tee .hash-marker >> "$GITHUB_OUTPUT"
+          digest=$(cat .hash-marker)
+          if [ -z "$digest" ]; then
+            echo "Failed to find output hash" >&2
+            exit 1
+          fi
+
+      - name: Cache
+        id: cache
+        uses: actions/cache@v5
+        with:
+          path: .hash-marker
+          key: map-hash-${{ steps.convert.outputs.digest }}
+
+      - name: Upload KMZ artifact
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: actions/upload-artifact@v6
+        with:
+          name: shelter-kmz-${{ github.run_id }}
+          path: data/*.kmz

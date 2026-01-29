@@ -1,0 +1,25 @@
+[project]
+name = "shelter-map"
+description = "Utilities for downloading and exporting municipal public shelter locations."
+readme = "README.md"
+requires-python = ">=3.12"
+license = {file = "LICENSE"}
+authors = [{name = "Shelter Map Contributors"}]
+keywords = ["gis", "shelters", "israel", "kml", "csv"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: GIS",
+]
+dynamic = ["dependencies", "version"]
+
+[build-system]
+requires = ["hatchling==1.27.0", "hatch-requirements-txt==0.4.1"]
+build-backend = "hatchling.build"
+dependencies = {file = ["requirements.txt"]}
+
+[tool.hatch.version]
+path = "shelter_map/__init__.py"

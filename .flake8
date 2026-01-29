@@ -1,0 +1,7 @@
+[flake8]
+max-line-length = 120
+# E203 - whitespace before comma - black adds this and we don't want flake8
+#        to care about this.
+# C408 - dict literal -sometimes they're prettier, and written as dict()
+#        they are later easy to refactor into dataclasses.
+extend-ignore = E203,C408
