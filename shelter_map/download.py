@@ -13,8 +13,12 @@ def main(out_dir: str | Path = "data"):
     for city in all_cities:
         name = getattr(city, "NAME", city)
         logger.info("Downloading data for %s", name)
-        city.download_data(out_dir)
-        logger.debug("Finished downloading data for %s", name)
+        try:
+            city.download_data(out_dir)
+            logger.debug("Finished downloading data for %s", name)
+        except Exception:
+            logger.exception("Failed to download data for %s", name)
+
     logger.info("Done")
 
 
