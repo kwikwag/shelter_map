@@ -27,6 +27,13 @@ jobs:
       - name: Download latest shelter data
         run: python -m shelter_map.download --out-dir data
 
+      - name: Check resolution and connectivity
+        shell: bash
+        run: |
+          set -euo pipefail
+          getent hosts gisn.tel-aviv.gov.il || true
+          curl -I -m 10 -v https://gisn.tel-aviv.gov.il/ || true
+
       - name: Run converter
         id: convert
         shell: bash
