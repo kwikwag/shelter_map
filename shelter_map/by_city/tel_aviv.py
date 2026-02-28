@@ -3,15 +3,27 @@ from pathlib import Path
 
 import requests
 
-from ..common import Icon, Map, Place, dump, get_update_date, load
+from ..common import FieldMapping, Icon, Map, Place, dump, format_sqm, get_update_date, identity, load, map_pairs
 
 logger = logging.getLogger(__name__)
 
 NAME = "Tel Aviv"
 
 BASE_URL = "https://gisn.tel-aviv.gov.il/arcgis/rest/services/IView2/MapServer"
+SOURCE_URL = "https://www5.tel-aviv.gov.il/Tlv4U/Gis/Default.aspx?592"
 SHELTERS_JSON = "tel_aviv_shelters.json"
 SHELTERS_META_JSON = "tel_aviv_shelters_meta.json"
+DESCRIPTION_MAPPING: FieldMapping = {
+    "t_sug": ("סוג", identity),
+    "hearot": True,
+    "pail": True,
+    "is_open": True,
+    "maneger_name": True,
+    "shetach_mr": ("שטח", format_sqm),
+    "ms_miklat": True,
+    "date_import": True,
+    "__source": ("מקור המידע", identity),
+}
 
 
 def get_tel_aviv_json(layer: str, limit: int):
@@ -55,31 +67,6 @@ def build_name(attrs):
     return " ".join(name_parts) if name_parts else "Unknown Location"
 
 
-def build_description_pairs(attrs, aliases: dict):
-    mapping = {
-        "t_sug": ("סוג", lambda x: x),
-        "hearot": True,
-        "pail": True,
-        "is_open": True,
-        "maneger_name": True,
-        "shetach_mr": ("שטח", lambda x: f"{x} מר"),
-        "ms_miklat": True,
-        "date_import": True,
-    }
-
-    pairs = []
-    for field, format in mapping.items():
-        value = attrs[field]
-        if value is None:
-            continue
-        alias = aliases[field]
-        if isinstance(format, tuple):
-            alias, value_formatting = format
-            value = value_formatting(value)
-        pairs.append((alias, value))
-    return pairs
-
-
 def get_icon_map(meta_data: dict):
     renderer = meta_data["drawingInfo"]["renderer"]
     assert renderer["field1"] == "t_sug"
@@ -113,18 +100,18 @@ def generate_map(data_dir: Path):
 
     places = []
     for feature in data["features"]:
-        attrs = feature["attributes"]
+        attrs = dict(feature["attributes"], __source=SOURCE_URL)
 
         # Skip if no coordinates
         if not attrs.get("lat") or not attrs.get("lon"):
             continue
 
         name = build_name(attrs)
-        desc = build_description_pairs(attrs, aliases=aliases)
-        icon_index = icon_map.get(attrs.get("t_sug"), icon_map[None])
+        desc = map_pairs(attrs, mapping=DESCRIPTION_MAPPING, labels=aliases)
+        icon = icon_map.get(attrs.get("t_sug"), icon_map[None])
         lon = float(attrs["lon"])
         lat = float(attrs["lat"])
-        places.append(Place(name=name, desc=desc, icon=icon_index, lon=lon, lat=lat))
+        places.append(Place(name=name, desc=desc, icon=icon, lon=lon, lat=lat))
 
     icons = list(icon_map.values())
 

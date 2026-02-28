@@ -156,6 +156,7 @@ def dump_kmz(contents, path, attachments):
 def export(map_: Map, name: str, out_dir: Path, base_name: str, format: str, max_per_file: int = 2_000):
     num_files = (len(map_.places) - 1) // max_per_file + 1
     logger.debug("Exporting %s map into %s files.", name, num_files)
+    digest = b""
     for file_idx in range(num_files):
         suffix = "" if num_files == 1 else f".{file_idx + 1}"
         name_of_part = name if num_files == 1 else f"{name} ({file_idx + 1})"
@@ -174,7 +175,7 @@ def export(map_: Map, name: str, out_dir: Path, base_name: str, format: str, max
             raise NotImplementedError("Invalid format")
 
         print(f"Output to: {out_path.as_posix()}")
-    digest = map_hash(map_)
+        digest += map_hash(map_)
     print(f"Hash: {out_path.name}:{digest.hex()}")
     return digest
 
