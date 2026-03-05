@@ -181,6 +181,54 @@ def geocode_addresses_batch(
     return results
 
 
+def fix_item_during_generate(item: dict):
+    neighborhood = item[Cols.NEIGHBORHOOD]
+    shelter_type = item[Cols.TYPE]
+
+    categories = item[Cols.CATEGORY].split(",")
+    neighborhoods = [neighborhood] if neighborhood else []
+    shelter_types = {shelter_type} if shelter_type else set()
+    for category in categories:
+        category = category.strip()
+        if "מקלט" in category or "מרחב מוגן" in category:
+            shelter_types.add(category)
+        else:
+            neighborhoods.append(category)
+
+    neighborhood = ", ".join(sorted(set(neighborhoods)))
+
+    access_from_type = None
+    if "מקלט" in shelter_types and any("מקלט " in s for s in shelter_types):
+        shelter_types -= {"מקלט"}
+
+    if "מקלט נגיש" in shelter_types:
+        shelter_types -= {"מקלט נגיש"}
+        access_from_type = "מקלט נגיש"
+
+    if len(shelter_types) > 1:
+        logger.warning("More than one shelter type: %s", shelter_types)
+
+    access_from_record = item[Cols.ACCESS]
+    if "יסודי" in access_from_record:
+        shelter_type = {f"{s} {access_from_record}" if "בבית ספר" in s else s for s in shelter_types}
+        access_from_record = None
+
+    item[Cols.ACCESS] = ", ".join(sorted({x for x in (access_from_record, access_from_type) if x}))
+
+    shelter_type = ", ".join(sorted(shelter_types))
+
+    if "יסודי" in item[Cols.ACCESS]:
+        logger.warning("Bad %s: item=%r", Cols.ACCESS, item)
+
+    if len(shelter_types) > 1:
+        logger.warning("Multiple shelter types: item", item)
+
+    item[Cols.NEIGHBORHOOD] = neighborhood
+    item[Cols.TYPE] = shelter_type
+    item[Cols.CATEGORY] = None
+    return item
+
+
 def generate_map(data_dir: Path, icons_as_dataurls: bool = True):
     json_path = data_dir / JSON_NAME
     logger.debug("Reading: %s", json_path)
@@ -201,8 +249,13 @@ def generate_map(data_dir: Path, icons_as_dataurls: bool = True):
     icons = [icon]
 
     for item in data:
+        item = fix_item_during_generate(item)
         item = dict(item, **{Cols.SOURCE: SOURCE_URL, Cols.RECORD_DATE: update_date})
-        name = normalize_addr(item[Cols.ADDR1], item)
+        name = item[Cols.ADDR1]
+        shelter_type = item[Cols.TYPE]
+        if shelter_type:
+            name = f"{shelter_type} {name}"
+
         lon_str = item[Cols.LON]
         lat_str = item[Cols.LAT]
 
@@ -221,38 +274,11 @@ def generate_map(data_dir: Path, icons_as_dataurls: bool = True):
     return Map(icons=icons, places=places)
 
 
-def fix_item(item: dict[str, JsonValue]):
+def fix_item_during_download(item: dict[str, JsonValue]):
     addr1 = item[Cols.ADDR1] = normalize_addr(item[Cols.ADDR1], item)
     addr2 = item[Cols.ADDR2] = normalize_addr(item[Cols.ADDR2], item)
     if addr1 == addr2:
         addr2 = item[Cols.ADDR2] = None
-
-    neighborhood = item[Cols.NEIGHBORHOOD]
-    shelter_type = item[Cols.TYPE]
-
-    categories = item[Cols.CATEGORY].split(",")
-    neighborhoods = [neighborhood] if neighborhood else []
-    shelter_types = [shelter_type] if shelter_type else []
-    for category in categories:
-        category = category.strip()
-        if "מקלט" in category or "מרחב מוגן" in category:
-            shelter_types.append(category)
-        else:
-            neighborhoods.append(category)
-
-    neighborhood = ", ".join(sorted(set(neighborhoods)))
-    shelter_type = ", ".join(sorted(set(shelter_types)))
-
-    if "בבית ספר" in shelter_type:
-        access = item[Cols.ACCESS]
-        if "יסודי" in access:
-            # item[Cols.ACCESS] is יסודי\על יסודי
-            shelter_type = f"{shelter_type} {item[Cols.ACCESS]}"
-            item[Cols.ACCESS] = ""
-
-    item[Cols.NEIGHBORHOOD] = neighborhood
-    item[Cols.TYPE] = shelter_type
-    item[Cols.CATEGORY] = None
 
     return item
 
@@ -283,12 +309,11 @@ def download_data(data_dir: Path, node_id: int = 139154, skip_geocodes: bool = F
     contents = response.content.decode("utf-8")
     contents = contents.lstrip("\ufeff").splitlines()
     reader = csv.DictReader(contents)
-    items = list(reader)
+    items = [fix_item_during_download(item) for item in reader]
 
     missing_lonlat_addr_to_items: dict[str, list[dict[str, JsonValue]]] = defaultdict(list)
 
     for item in items:
-        item = fix_item(item)
         addr = item[Cols.ADDR1]
         lon_str = item[Cols.LON]
         lat_str = item[Cols.LAT]
